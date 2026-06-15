@@ -14,9 +14,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # LLM
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4o"
+    # LLM — reached via LangChain's init_chat_model, so swapping providers is a
+    # config change (set llm_provider + llm_model + the provider's API key env var).
+    llm_provider: str = "openai"     # openai | anthropic | google_genai | ...
+    llm_model: str = "gpt-4o"
+    llm_temperature: float = 0.0
+    openai_api_key: str = ""         # read by langchain-openai as OPENAI_API_KEY
 
     # LangSmith tracing/observability (optional)
     langsmith_tracing: bool = False

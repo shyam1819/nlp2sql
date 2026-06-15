@@ -104,7 +104,7 @@ relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → colum
 |----|----------|--------|--------------------------|
 | D-1 | **LangGraph** as the agent framework | Accepted | Native stateful nodes, conditional edges, retry loops, checkpointers. Alt: Google ADK (thinner loop/memory story). |
 | D-2 | **Sakila (SQLite)** as the seed DB | Accepted | Canonical multi-table movie schema, single file, no server. Alt: IMDb/TMDB (flatter, heavier), Chinook (not movies). |
-| D-3 | **OpenAI** as LLM provider | Accepted | Per project standardization. Reached only via `llm.client` (INV-7). |
+| D-3 | **OpenAI** as default LLM provider | Accepted | Project default. Reached only via `llm.client` (INV-7), now provider-agnostic per D-13. |
 | D-4 | **SQLite checkpointer** for memory | Accepted | Survives restarts, no infra. → Postgres in Phase 2. |
 | D-5 | **Cache abstraction**, in-memory now | Accepted | `Cache` protocol; Redis is a config swap. Redis deferred per request. |
 | D-6 | **Separate conversation store** (SQLite) | Accepted | Audit/analytics distinct from checkpointing (INV-6). → Postgres later. |
@@ -114,6 +114,7 @@ relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → colum
 | D-10 | **All paths route through `ingest`** | Accepted | Complete audit trail (INV-4). |
 | D-11 | **LangSmith tracing, opt-in** | Accepted | Off by default; enabled via `.env`. |
 | D-12 | **List-of-objects over dicts** in structured outputs | Accepted | OpenAI strict mode rejects open-ended dicts (INV-8). |
+| D-13 | **LLM access via LangChain `init_chat_model`** (not the raw `openai` SDK) | Accepted | Provider swap becomes a config change (`LLM_PROVIDER`), realizing INV-7; LangSmith captures token usage natively (removes the `wrap_openai` patch). Structured outputs pinned to `with_structured_output(method="json_schema", strict=True)` to preserve INV-8/D-12. Formalizes the previously-undocumented raw-SDK choice. |
 
 ---
 

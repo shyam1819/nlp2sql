@@ -109,7 +109,7 @@ src/nlp2sql/
 ├── cache/               # Cache protocol + in-memory backend (Redis later)
 ├── db/                  # read-only connection + cached introspection
 ├── persistence/         # ConversationStore (turn-level audit log)
-├── llm/                 # OpenAI client + per-node prompts/schemas
+├── llm/                 # provider-agnostic chat model (init_chat_model) + prompts
 ├── nodes/               # one module per pipeline node
 ├── sql_safety.py        # deterministic static SELECT guard
 ├── graph.py             # build_graph(): wiring, retry loops, checkpointer
