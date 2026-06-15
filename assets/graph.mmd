@@ -1,0 +1,37 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	relevance(relevance)
+	clarification(clarification)
+	rephrase(rephrase)
+	table_selection(table_selection)
+	column_selection(column_selection)
+	sql_generation(sql_generation)
+	schema_guard(schema_guard)
+	execute(execute)
+	answer(answer)
+	ingest(ingest)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> relevance;
+	answer --> ingest;
+	clarification -.-> ingest;
+	clarification -.-> rephrase;
+	column_selection --> sql_generation;
+	execute -.-> answer;
+	execute -.-> sql_generation;
+	relevance -.-> clarification;
+	relevance -.-> ingest;
+	rephrase --> table_selection;
+	schema_guard -.-> answer;
+	schema_guard -.-> execute;
+	schema_guard -.-> sql_generation;
+	sql_generation --> schema_guard;
+	table_selection --> column_selection;
+	ingest --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

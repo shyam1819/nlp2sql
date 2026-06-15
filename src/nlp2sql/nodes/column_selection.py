@@ -1,0 +1,29 @@
+"""Node 4: fetch schemas for the chosen tables and select the needed columns.
+
+We render the full schema (cached) as context and store it for the generator,
+along with the model's column shortlist.
+"""
+
+from __future__ import annotations
+
+from ..db.introspect import render_schema
+from ..llm import client, prompts
+from ..llm.schemas import ColumnSelection
+from ..state import AgentState
+
+
+def column_selection_node(state: AgentState) -> dict:
+    question = state["rephrased_question"]
+    tables = state["required_tables"]
+    schema_context = render_schema(tables)
+
+    selection = client.parse(
+        prompts.render("column_selection.system"),
+        prompts.render("column_selection.user", schema=schema_context, question=question),
+        ColumnSelection,
+    )
+    columns = {tc.table: tc.columns for tc in selection.selections}
+    return {
+        "selected_columns": columns,
+        "schema_context": schema_context,
+    }

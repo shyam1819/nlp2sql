@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Env / secrets
+.env
+
+# Data / generated databases
+data/sakila.db
+data/checkpoints.db
+data/conversations.db

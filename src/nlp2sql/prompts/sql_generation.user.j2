@@ -1,0 +1,24 @@
+Schema:
+{{ schema }}
+
+Relevant columns:
+{% for table, cols in columns.items() %}
+  {{ table }}: {{ cols | join(', ') }}
+{% endfor %}
+
+Question: {{ question }}
+{% if guard_feedback %}
+
+Your previous query was rejected by the safety guard: {{ guard_feedback }}
+{% endif %}
+{% if execution_error %}
+
+Your previous query failed to execute: {{ execution_error }}
+{% endif %}
+{% if (guard_feedback or execution_error) and previous_sql %}
+
+Previous query was:
+{{ previous_sql }}
+{% endif %}
+
+SQL:
