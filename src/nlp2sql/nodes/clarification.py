@@ -6,8 +6,8 @@ the next user turn resumes the same thread (memory carries the context).
 
 from __future__ import annotations
 
-from ..llm import client
-from ..llm.prompts import CLARIFICATION_SYSTEM, ClarificationDecision
+from ..llm import client, prompts
+from ..llm.schemas import ClarificationDecision
 from ..state import AgentState
 from . import format_history
 
@@ -16,8 +16,8 @@ def clarification_node(state: AgentState) -> dict:
     question = state["question"]
     history = format_history(state.get("messages", []))
     decision = client.parse(
-        CLARIFICATION_SYSTEM,
-        f"Conversation so far:\n{history}\n\nLatest question: {question}",
+        prompts.render("clarification.system"),
+        prompts.render("clarification.user", history=history, question=question),
         ClarificationDecision,
     )
     if decision.needs_clarification and decision.question:

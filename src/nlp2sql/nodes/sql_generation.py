@@ -7,8 +7,7 @@ so the next attempt can correct itself.
 
 from __future__ import annotations
 
-from ..llm import client
-from ..llm.prompts import SQL_GENERATION_SYSTEM
+from ..llm import client, prompts
 from ..state import AgentState
 
 
@@ -22,24 +21,18 @@ def _strip_fences(sql: str) -> str:
 
 def sql_generation_node(state: AgentState) -> dict:
     question = state["rephrased_question"]
-    schema_context = state.get("schema_context", "")
-    selected = state.get("selected_columns", {})
-    columns_text = "\n".join(f"  {t}: {', '.join(cols)}" for t, cols in selected.items())
 
-    feedback_parts = []
-    if state.get("guard_feedback"):
-        feedback_parts.append(f"Your previous query was rejected by the safety guard: {state['guard_feedback']}")
-    if state.get("execution_error"):
-        feedback_parts.append(f"Your previous query failed to execute: {state['execution_error']}")
-    if state.get("sql_query") and feedback_parts:
-        feedback_parts.append(f"Previous query was:\n{state['sql_query']}")
-    feedback = ("\n\n" + "\n".join(feedback_parts)) if feedback_parts else ""
-
-    user = (
-        f"Schema:\n{schema_context}\n\n"
-        f"Relevant columns:\n{columns_text}\n\n"
-        f"Question: {question}{feedback}\n\nSQL:"
+    # The template handles column formatting (loop) and the retry-feedback
+    # conditionals — the node just passes raw state values.
+    user = prompts.render(
+        "sql_generation.user",
+        schema=state.get("schema_context", ""),
+        columns=state.get("selected_columns", {}),
+        question=question,
+        guard_feedback=state.get("guard_feedback", ""),
+        execution_error=state.get("execution_error", ""),
+        previous_sql=state.get("sql_query", ""),
     )
-    sql = _strip_fences(client.complete(SQL_GENERATION_SYSTEM, user))
+    sql = _strip_fences(client.complete(prompts.render("sql_generation.system"), user))
     # Clear stale feedback so a fresh attempt isn't re-penalised next loop.
     return {"sql_query": sql, "guard_feedback": "", "execution_error": ""}

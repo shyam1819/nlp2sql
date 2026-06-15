@@ -69,6 +69,17 @@ LANGSMITH_PROJECT=nlp2sql
 which loads these from settings into the environment LangChain reads — no manual
 `export` needed. It's a no-op when `LANGSMITH_TRACING=false`.
 
+## Prompts
+
+All LLM prompts are **Jinja2 templates** in [`src/nlp2sql/prompts/`](src/nlp2sql/prompts) —
+`<node>.system.j2` / `<node>.user.j2`, plus shared `fragments/`. Because they're
+Jinja2, both wording *and* presentation logic live in the files: conditionals
+(retry feedback) and loops (catalog/column lists) are in the templates, so nodes
+just pass raw data. Edit a template and it **hot-reloads** (no restart). `{{ domain }}`
+is auto-injected from `fragments/domain.j2`; `StrictUndefined` flags missing
+variables. Point `PROMPTS_DIR` at another folder to override the packaged prompts.
+Structural output schemas stay in `llm/schemas.py`.
+
 ## Setup
 
 ```bash
@@ -109,7 +120,8 @@ src/nlp2sql/
 ├── cache/               # Cache protocol + in-memory backend (Redis later)
 ├── db/                  # read-only connection + cached introspection
 ├── persistence/         # ConversationStore (turn-level audit log)
-├── llm/                 # provider-agnostic chat model (init_chat_model) + prompts
+├── prompts/             # Jinja2 prompt templates (.j2) — edit without touching code
+├── llm/                 # chat model (init_chat_model) + prompt loader + schemas
 ├── nodes/               # one module per pipeline node
 ├── sql_safety.py        # deterministic static SELECT guard
 ├── graph.py             # build_graph(): wiring, retry loops, checkpointer

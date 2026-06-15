@@ -6,8 +6,8 @@ function decides whether to loop back to generation or give up.
 
 from __future__ import annotations
 
-from ..llm import client
-from ..llm.prompts import GUARD_SYSTEM, GuardDecision
+from ..llm import client, prompts
+from ..llm.schemas import GuardDecision
 from ..sql_safety import static_guard
 from ..state import AgentState
 
@@ -25,7 +25,11 @@ def schema_guard_node(state: AgentState) -> dict:
         }
 
     # Layer 3: LLM guard — catches subtler intent, yields natural-language fix.
-    decision = client.parse(GUARD_SYSTEM, f"Query:\n{sql}", GuardDecision)
+    decision = client.parse(
+        prompts.render("guard.system"),
+        prompts.render("guard.user", sql=sql),
+        GuardDecision,
+    )
     if not decision.is_safe:
         return {
             "guard_passed": False,

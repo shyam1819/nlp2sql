@@ -95,6 +95,11 @@ relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → colum
   every front-end (CLI now, FastAPI later) consumes the same graph unchanged.
 - **INV-11 — DB-substrate independence.** No node hard-codes Sakila specifics
   beyond the swappable catalog/introspection layer.
+- **INV-12 — Prompts live in files, not code.** LLM prompt *text and
+  presentation logic* live in `prompts/*.j2` (Jinja2) and are loaded via
+  `llm.prompts.render`. Nodes must not inline prompt strings or build
+  prompt-facing strings (lists/conditionals belong in the template); nodes pass
+  raw data. Structural schemas stay in `llm/schemas.py`.
 
 ---
 
@@ -115,6 +120,7 @@ relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → colum
 | D-11 | **LangSmith tracing, opt-in** | Accepted | Off by default; enabled via `.env`. |
 | D-12 | **List-of-objects over dicts** in structured outputs | Accepted | OpenAI strict mode rejects open-ended dicts (INV-8). |
 | D-13 | **LLM access via LangChain `init_chat_model`** (not the raw `openai` SDK) | Accepted | Provider swap becomes a config change (`LLM_PROVIDER`), realizing INV-7; LangSmith captures token usage natively (removes the `wrap_openai` patch). Structured outputs pinned to `with_structured_output(method="json_schema", strict=True)` to preserve INV-8/D-12. Formalizes the previously-undocumented raw-SDK choice. |
+| D-14 | **Prompts externalized to `prompts/*.j2` (Jinja2)**, loaded by `llm.prompts.render` | Accepted | Prompt tuning needs no code change (INV-12). Jinja2 chosen over plain substitution so conditionals (retry feedback) and loops (catalog/column lists) live in templates, not nodes — nodes pass raw data. `auto_reload` hot-reload, `StrictUndefined` surfaces typos, `{{ domain }}` auto-injected. Override dir via `PROMPTS_DIR`. Schemas in `llm/schemas.py`. (Superseded the initial manual `{{var}}` loader.) |
 
 ---
 

@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     langsmith_project: str = "nlp2sql"
     langsmith_endpoint: str = "https://api.smith.langchain.com"
 
+    # Prompt files. Empty -> the packaged `nlp2sql/prompts/` dir. Point this at a
+    # directory to override prompts without touching the package.
+    prompts_dir: str = ""
+
     # Database under query (opened read-only)
     db_path: str = "data/sakila.db"
 

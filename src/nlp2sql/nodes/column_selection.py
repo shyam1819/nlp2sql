@@ -7,8 +7,8 @@ along with the model's column shortlist.
 from __future__ import annotations
 
 from ..db.introspect import render_schema
-from ..llm import client
-from ..llm.prompts import COLUMN_SELECTION_SYSTEM, ColumnSelection
+from ..llm import client, prompts
+from ..llm.schemas import ColumnSelection
 from ..state import AgentState
 
 
@@ -18,8 +18,8 @@ def column_selection_node(state: AgentState) -> dict:
     schema_context = render_schema(tables)
 
     selection = client.parse(
-        COLUMN_SELECTION_SYSTEM,
-        f"Schema:\n{schema_context}\n\nQuestion: {question}",
+        prompts.render("column_selection.system"),
+        prompts.render("column_selection.user", schema=schema_context, question=question),
         ColumnSelection,
     )
     columns = {tc.table: tc.columns for tc in selection.selections}

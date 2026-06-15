@@ -3,19 +3,19 @@
 from __future__ import annotations
 
 from ..db.introspect import get_catalog
-from ..llm import client
-from ..llm.prompts import TABLE_SELECTION_SYSTEM, TableSelection
+from ..llm import client, prompts
+from ..llm.schemas import TableSelection
 from ..state import AgentState
 
 
 def table_selection_node(state: AgentState) -> dict:
     question = state["rephrased_question"]
     catalog = get_catalog()
-    catalog_text = "\n".join(f"- {t}: {desc}" for t, desc in catalog.items())
 
+    # The template formats the catalog (loop) — the node just passes the dict.
     selection = client.parse(
-        TABLE_SELECTION_SYSTEM,
-        f"Catalog:\n{catalog_text}\n\nQuestion: {question}",
+        prompts.render("table_selection.system"),
+        prompts.render("table_selection.user", catalog=catalog, question=question),
         TableSelection,
     )
     # Keep only valid table names; fall back to all tables if the model whiffs.

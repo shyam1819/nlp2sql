@@ -5,16 +5,16 @@ If not, we set a user-facing refusal and the graph routes straight to ingest.
 
 from __future__ import annotations
 
-from ..llm import client
-from ..llm.prompts import RELEVANCE_SYSTEM, RelevanceDecision
+from ..llm import client, prompts
+from ..llm.schemas import RelevanceDecision
 from ..state import AgentState
 
 
 def relevance_node(state: AgentState) -> dict:
     question = state["question"]
     decision = client.parse(
-        RELEVANCE_SYSTEM,
-        f"Question: {question}",
+        prompts.render("relevance.system"),
+        prompts.render("relevance.user", question=question),
         RelevanceDecision,
     )
     if decision.is_relevant:

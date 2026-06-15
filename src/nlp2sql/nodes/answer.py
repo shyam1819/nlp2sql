@@ -10,8 +10,7 @@ import json
 
 from langchain_core.messages import AIMessage
 
-from ..llm import client
-from ..llm.prompts import ANSWER_SYSTEM
+from ..llm import client, prompts
 from ..state import AgentState
 
 
@@ -51,9 +50,14 @@ def answer_node(state: AgentState) -> dict:
 
     rows = state.get("query_result") or []
     answer = client.complete(
-        ANSWER_SYSTEM,
-        f"Question: {question}\n\nSQL: {state.get('sql_query','')}\n\n"
-        f"Rows ({len(rows)}):\n{_truncate_rows(rows)}",
+        prompts.render("answer.system"),
+        prompts.render(
+            "answer.user",
+            question=question,
+            sql=state.get("sql_query", ""),
+            row_count=len(rows),
+            rows=_truncate_rows(rows),
+        ),
     )
     return {
         "final_answer": answer,
