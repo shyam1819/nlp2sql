@@ -22,7 +22,8 @@ def column_selection_node(state: AgentState) -> dict:
         f"Schema:\n{schema_context}\n\nQuestion: {question}",
         ColumnSelection,
     )
+    columns = {tc.table: tc.columns for tc in selection.selections}
     return {
-        "selected_columns": selection.columns,
+        "selected_columns": columns,
         "schema_context": schema_context,
     }

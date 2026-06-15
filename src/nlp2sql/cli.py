@@ -19,17 +19,38 @@ from .graph import build_graph
 
 
 def run_turn(graph, question: str, thread_id: str) -> dict:
-    """Run one user turn through the graph and return the final state."""
+    """Run one user turn through the graph and return the final state.
+
+    The checkpointer persists state across turns on a thread (that's our
+    memory), so every per-turn derived field must be reset here — otherwise a
+    short-circuit turn (refusal/clarification) would inherit the previous
+    turn's SQL/tables/results and log them. `messages` is intentionally NOT
+    reset: the reducer appends to preserve history.
+    """
     config = {"configurable": {"thread_id": thread_id}}
     return graph.invoke(
         {
             "question": question,
             "thread_id": thread_id,
             "messages": [HumanMessage(content=question)],
-            # reset per-turn scratch fields
-            "retry_count": 0,
+            # reset per-turn derived state
+            "is_relevant": False,
+            "refusal_message": "",
+            "needs_clarification": False,
+            "clarification_message": "",
+            "rephrased_question": "",
+            "required_tables": [],
+            "selected_columns": {},
+            "schema_context": "",
+            "sql_query": "",
+            "guard_passed": False,
             "guard_feedback": "",
+            "query_result": None,
+            "row_count": None,
             "execution_error": "",
+            "retry_count": 0,
+            "final_answer": "",
+            "outcome": None,
         },
         config,
     )

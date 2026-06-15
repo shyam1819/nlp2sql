@@ -37,7 +37,8 @@ def answer_node(state: AgentState) -> dict:
         }
 
     # Retry budget exhausted without ever producing a guard-approved query.
-    if "query_result" not in state:
+    # query_result is None until the execute node runs; [] is a valid empty result.
+    if state.get("query_result") is None:
         answer = (
             "I couldn't construct a safe, valid query for that after several "
             "attempts. Could you try rephrasing your question?"
@@ -48,7 +49,7 @@ def answer_node(state: AgentState) -> dict:
             "messages": [AIMessage(content=answer)],
         }
 
-    rows = state.get("query_result", [])
+    rows = state.get("query_result") or []
     answer = client.complete(
         ANSWER_SYSTEM,
         f"Question: {question}\n\nSQL: {state.get('sql_query','')}\n\n"

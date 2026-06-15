@@ -1,0 +1,45 @@
+nlp2sql — Sample Questions (Sakila movie-rental database)
+=========================================================
+Use these to exercise the agent:  nlp2sql --thread demo
+
+--- Simple lookups (single table) ---
+How many films are in the database?
+List 10 film titles.
+What ratings (like PG, R) exist in the catalog?
+Show me all the film categories.
+Which films are longer than 180 minutes?
+
+--- Joins across tables ---
+Which films are in the Comedy category?
+What films has the actor "NICK WAHLBERG" appeared in?
+List the films available in Italian.
+Which actors star in the film "ACADEMY DINOSAUR"?
+Show 10 customers along with the city they live in.
+
+--- Aggregations / analytics ---
+Which 5 actors appear in the most films?
+What is the average rental rate per film category?
+What are the top 10 most-rented films?
+How much total revenue came from rentals in 2005?
+Which store has rented out the most films?
+How many customers are there per country?
+What is the longest film in each category?
+
+--- Multi-turn (tests memory; ask in sequence on one thread) ---
+What is the total rental revenue?
+   ...and just for store 1?
+   ...now break that down by month.
+Who are the top 5 actors by film count?
+   ...how many of those films are Action films?
+
+--- Should trigger a clarification question ---
+Show me the top films.            (top by what — rentals, revenue, length?)
+Who is the best customer?         (best by what metric?)
+List the recent rentals.          (how recent / what range?)
+
+--- Should be refused (out of scope) ---
+What's the weather in Paris today?
+Write me a poem about movies.
+What is 42 multiplied by 17?
+Who won the 2024 World Cup?
+Delete all the rental records.    (also blocked by the read-only guard)

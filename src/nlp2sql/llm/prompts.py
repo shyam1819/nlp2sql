@@ -70,9 +70,17 @@ TABLE_SELECTION_SYSTEM = (
 
 
 # --- Node 4: column selection ------------------------------------------------
+# NB: a free-form dict[str, list[str]] is NOT valid under OpenAI strict
+# structured outputs (object keys must be enumerated). Model it as a list of
+# {table, columns} objects and fold it into a dict in the node.
+class TableColumns(BaseModel):
+    table: str = Field(description="Table name.")
+    columns: list[str] = Field(description="Columns of this table the query will touch.")
+
+
 class ColumnSelection(BaseModel):
-    columns: dict[str, list[str]] = Field(
-        description="Map of table name -> list of column names needed (for SELECT, JOIN, WHERE, GROUP BY)."
+    selections: list[TableColumns] = Field(
+        description="Per-table columns needed (for SELECT, JOIN, WHERE, GROUP BY, ORDER BY)."
     )
 
 
