@@ -40,15 +40,23 @@ class AgentState(TypedDict, total=False):
 
     # --- Node 6: schema guard ---
     guard_passed: bool
-    guard_feedback: str  # fed back to Node 5 on a guarded retry
+    guard_feedback: str  # fed back to generation on a guarded retry
+
+    # --- Node 6b: verification (semantic correctness) ---
+    verification_passed: bool
+    verification_feedback: str  # correctness issues fed back to generation
+    truncated: bool             # result hit the row cap (surfaced in the answer)
 
     # --- Node 7: execute ---
     query_result: list[dict[str, Any]]
     row_count: int
-    execution_error: str  # fed back to Node 5 on an execution retry
+    execution_error: str  # fed back to generation on an execution retry
 
-    # Shared retry budget across Nodes 6 and 7.
+    # Mechanical retry budget (guard + execute loops).
     retry_count: int
+    # Semantic retry budget (verification loop) — separate so a logic fix isn't
+    # starved by mechanical retries and vice versa.
+    logic_retry_count: int
 
     # --- Node 8: answer ---
     final_answer: str

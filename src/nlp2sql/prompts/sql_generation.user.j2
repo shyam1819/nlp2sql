@@ -11,11 +11,15 @@ Question: {{ question }}
 
 Your previous query was rejected by the safety guard: {{ guard_feedback }}
 {% endif %}
+{% if verification_feedback %}
+
+A reviewer flagged a correctness problem with your previous query: {{ verification_feedback }}
+{% endif %}
 {% if execution_error %}
 
 Your previous query failed to execute: {{ execution_error }}
 {% endif %}
-{% if (guard_feedback or execution_error) and previous_sql %}
+{% if (guard_feedback or verification_feedback or execution_error) and previous_sql %}
 
 Previous query was:
 {{ previous_sql }}

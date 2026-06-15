@@ -23,3 +23,23 @@ Do not silently let code and `PROJECT.md` diverge.
 - Run the agent: `nlp2sql` (or `nlp2sql --thread <id>`). Tests: `pytest`.
 - Seed DB: `python data/setup_db.py` → `data/sakila.db` (read-only at runtime).
 - Secrets/config in `.env` (see `.env.example`).
+
+## Where things live
+
+- `graph.py` — pipeline wiring + retry routing. Nodes in `nodes/` (relevance,
+  clarification, rephrase, table_selection, column_selection, sql_generation,
+  schema_guard, **verify**, execute, answer, ingest).
+- `prompts/*.j2` — all prompt text (Jinja2; edit without code changes, INV-12).
+  Structural output models in `llm/schemas.py`. LLM access via `llm/client.py`
+  (`init_chat_model`, provider-agnostic, D-13).
+- `metadata/` — `SemanticMetadataProvider` for table/column descriptions; sidecar
+  `sakila.yaml` today, warehouse/dbt adapters later (D-15).
+- `db/` — read-only connection + cached introspection. `cache/` (Cache protocol),
+  `persistence/` (conversation store), `observability.py` (LangSmith).
+
+## Editing reminders
+
+- Prompts → edit the `.j2` file (hot-reloads); never inline prompt strings (INV-12).
+- Two retry budgets: `MAX_RETRIES` (mechanical) + `LOGIC_RETRY_MAX` (semantic, D-18).
+- A safe + runnable query is not assumed correct — `verify` reviews it (INV-13).
+- Governance/access limits must be enforced deterministically, not via prompt (INV-14).

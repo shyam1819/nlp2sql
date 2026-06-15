@@ -40,3 +40,13 @@ class ColumnSelection(BaseModel):
 class GuardDecision(BaseModel):
     is_safe: bool = Field(description="True only if the query is a single, read-only SELECT.")
     reason: str = Field(description="If unsafe, what is wrong so the generator can fix it.")
+
+
+class VerificationDecision(BaseModel):
+    is_sound: bool = Field(
+        description="True if the query correctly and faithfully answers the question, with no correctness problems."
+    )
+    issues: str = Field(
+        default="",
+        description="If not sound, the specific correctness problems (e.g. join fan-out, wrong grain, missing filter) and how to fix them.",
+    )

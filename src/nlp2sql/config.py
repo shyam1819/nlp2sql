@@ -38,8 +38,17 @@ class Settings(BaseSettings):
     # Database under query (opened read-only)
     db_path: str = "data/sakila.db"
 
-    # Agent behaviour — shared retry budget for Node 6 (guard) and Node 7 (execute)
-    max_retries: int = 2
+    # SQL dialect the generator targets (drives prompt syntax/functions). The
+    # execution backend is still SQLite until the connector layer lands.
+    sql_dialect: str = "sqlite"  # sqlite | postgres | snowflake | databricks | bigquery | ...
+    # Max rows fetched for a result (row listings). Aggregates are typically small.
+    max_result_rows: int = 1000
+
+    # Agent behaviour — two separate retry budgets:
+    #   max_retries       : mechanical failures (unsafe guard / SQL execution error)
+    #   logic_retry_max   : semantic failures flagged by the verification node
+    max_retries: int = 3
+    logic_retry_max: int = 2
 
     # Cache for table schemas + descriptions
     cache_backend: str = "memory"  # memory | redis

@@ -12,6 +12,7 @@ graph TD;
 	column_selection(column_selection)
 	sql_generation(sql_generation)
 	schema_guard(schema_guard)
+	verify(verify)
 	execute(execute)
 	answer(answer)
 	ingest(ingest)
@@ -23,14 +24,17 @@ graph TD;
 	column_selection --> sql_generation;
 	execute -.-> answer;
 	execute -.-> sql_generation;
+	execute -.-> table_selection;
 	relevance -.-> clarification;
 	relevance -.-> ingest;
 	rephrase --> table_selection;
 	schema_guard -.-> answer;
-	schema_guard -.-> execute;
 	schema_guard -.-> sql_generation;
+	schema_guard -.-> verify;
 	sql_generation --> schema_guard;
 	table_selection --> column_selection;
+	verify -.-> execute;
+	verify -.-> sql_generation;
 	ingest --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0

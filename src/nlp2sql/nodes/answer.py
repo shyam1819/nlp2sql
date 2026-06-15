@@ -59,6 +59,21 @@ def answer_node(state: AgentState) -> dict:
             rows=_truncate_rows(rows),
         ),
     )
+
+    # Caveats: a clipped result or an unresolved correctness concern must be flagged.
+    caveats = []
+    if state.get("truncated"):
+        caveats.append(
+            f"Note: results were capped at {len(rows)} rows, so this may be incomplete."
+        )
+    if state.get("verification_passed") is False and state.get("verification_feedback"):
+        caveats.append(
+            "Caution: an automated review still flagged a possible correctness "
+            f"issue I couldn't fully resolve — {state['verification_feedback']}"
+        )
+    if caveats:
+        answer = answer + "\n\n" + "\n".join(caveats)
+
     return {
         "final_answer": answer,
         "outcome": "answered",

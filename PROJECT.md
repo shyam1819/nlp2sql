@@ -33,12 +33,15 @@ a single terminal ingest step. See `assets/graph.png` for the rendered graph.
 
 ```
 relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → column_select(4)
-   → sql_generation(5) ⇄ schema_guard(6) ⇄ execute(7) → answer(8) → ingest → END
+   → sql_generation(5) → schema_guard(6) → verify(6b) → execute(7) → answer(8) → ingest → END
 ```
 
 - **Relevance/clarification** short-circuit to `ingest` (refusal / follow-up).
-- **Guard (6)** and **execute (7)** loop back to **generation (5)** sharing one
-  bounded retry counter.
+- **Mechanical loop** (`MAX_RETRIES`): guard rejection and execution errors loop
+  back to generation; a `no such table/column` error relinks via `table_select`.
+- **Semantic loop** (`LOGIC_RETRY_MAX`): the verification node (6b) sends
+  correctness problems back to generation; on exhaustion it runs best-effort and
+  the answer carries a caveat.
 - **Every** path ends at `ingest`, which records the turn for audit.
 
 **Layered concerns (kept independent):**
@@ -76,8 +79,10 @@ relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → colum
 - **INV-2 — Only single `SELECT` executes.** Enforced by three independent layers:
   (1) read-only connection, (2) static `sqlparse` guard, (3) LLM guard. Removing
   any layer weakens, not duplicates — keep all three.
-- **INV-3 — Bounded, shared retry budget.** Generation↔guard↔execute loops share
-  one counter capped at `MAX_RETRIES`. No unbounded loops.
+- **INV-3 — Bounded retry budgets.** All correction loops are bounded — no
+  unbounded loops. Two *separate* budgets (D-18): mechanical (`MAX_RETRIES`,
+  guard + execute) and semantic (`LOGIC_RETRY_MAX`, verification). *(Revised from
+  the original single shared counter to support the verification loop.)*
 - **INV-4 — Single terminal sink.** Every turn terminates through `ingest`; the
   audit log must never have gaps for refused/clarified/failed turns.
 - **INV-5 — Cached metadata.** Schemas/descriptions are accessed through the
@@ -100,6 +105,15 @@ relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → colum
   `llm.prompts.render`. Nodes must not inline prompt strings or build
   prompt-facing strings (lists/conditionals belong in the template); nodes pass
   raw data. Structural schemas stay in `llm/schemas.py`.
+- **INV-13 — Safe + runnable ≠ correct.** A query that passes the guard and
+  executes is not assumed correct. The verification node reviews analytical
+  correctness (join grain/fan-out, grouping, filters) before execute; an
+  unverified result that ships must carry a caveat.
+- **INV-14 — Governance is enforced, not prompted.** Access/privacy constraints
+  (row-level restrictions, column masking, aggregation-only, min group size) are
+  enforced deterministically (governed views, DB policies, a policy gate) — never
+  by asking the LLM to comply. Same philosophy as INV-1/INV-2 for writes. *(The
+  business/governance layer is not built yet; this fixes its design contract.)*
 
 ---
 
@@ -114,7 +128,7 @@ relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → colum
 | D-5 | **Cache abstraction**, in-memory now | Accepted | `Cache` protocol; Redis is a config swap. Redis deferred per request. |
 | D-6 | **Separate conversation store** (SQLite) | Accepted | Audit/analytics distinct from checkpointing (INV-6). → Postgres later. |
 | D-7 | **3-layer SQL safety** | Accepted | Connection wall + static parse + LLM guard (INV-2). |
-| D-8 | **Shared retry counter, cap 2** | Accepted | One budget across guard+execute (INV-3). |
+| D-8 | **Shared retry counter, cap 2** | Superseded by D-18 | One budget across guard+execute (INV-3). |
 | D-9 | **Turn-based clarification** (not `interrupt()`) | Accepted | One HTTP request = one turn; resumes via memory. Simpler for Phase 2 API. Revisit if strict pause semantics are needed. |
 | D-10 | **All paths route through `ingest`** | Accepted | Complete audit trail (INV-4). |
 | D-11 | **LangSmith tracing, opt-in** | Accepted | Off by default; enabled via `.env`. |
@@ -122,6 +136,10 @@ relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → colum
 | D-13 | **LLM access via LangChain `init_chat_model`** (not the raw `openai` SDK) | Accepted | Provider swap becomes a config change (`LLM_PROVIDER`), realizing INV-7; LangSmith captures token usage natively (removes the `wrap_openai` patch). Structured outputs pinned to `with_structured_output(method="json_schema", strict=True)` to preserve INV-8/D-12. Formalizes the previously-undocumented raw-SDK choice. |
 | D-14 | **Prompts externalized to `prompts/*.j2` (Jinja2)**, loaded by `llm.prompts.render` | Accepted | Prompt tuning needs no code change (INV-12). Jinja2 chosen over plain substitution so conditionals (retry feedback) and loops (catalog/column lists) live in templates, not nodes — nodes pass raw data. `auto_reload` hot-reload, `StrictUndefined` surfaces typos, `{{ domain }}` auto-injected. Override dir via `PROMPTS_DIR`. Schemas in `llm/schemas.py`. (Superseded the initial manual `{{var}}` loader.) |
 | D-15 | **Semantic descriptions via a pluggable `SemanticMetadataProvider`**, not DB introspection alone | Accepted | Column/table descriptions feed the agent's schema context (table-selection + SQL-gen). Sourced through `metadata/` adapters merged by priority (highest business value first): catalog/dbt → native engine comments → file sidecar → name heuristics. Today: file sidecar (`metadata/sakila.yaml`) since SQLite has no native column comments; `render_schema` appends descriptions. Future warehouse adapters (Snowflake/Databricks/BigQuery `COMMENT`, SQL Server extended properties, dbt/Unity/Snowflake catalogs) slot in as adapters, not rewrites. Aligns with INV-11. Override via `METADATA_PATH`. |
+| D-16 | **Verification node** (correctness review) before execute (P1) | Accepted | EXPLAIN dry-run + LLM correctness review (fan-out, grouping, filters, faithfulness) catch silently-wrong-but-runnable queries (INV-13). On fail, regenerate via the semantic budget; on exhaustion, run best-effort and caveat. Verifier prompt biased to flag only demonstrable errors (avoids false-positive retries on benign structural fan-out). |
+| D-17 | **Dialect-aware generation + configurable row cap** (P2) | Accepted | `SQL_DIALECT` parameterizes generated syntax (default `sqlite`; ready for Snowflake/Databricks/BigQuery via the connector layer); prompt encourages CTEs/window functions and fan-out care. `MAX_RESULT_ROWS` (default 1000) replaces the hard 200 cap; truncation is flagged in the answer. Execution backend stays SQLite until connectors land. |
+| D-18 | **Two retry budgets: mechanical + semantic** (P5), supersedes D-8 | Accepted | `MAX_RETRIES` (default 3) covers guard + execute; `LOGIC_RETRY_MAX` (default 2) covers verification. Separate so a logic fix isn't starved by mechanical retries. Revises INV-3. |
+| D-19 | **Schema-linking repair routing** (P3, partial) | Accepted | A `no such table/column` execution error routes back to `table_selection` (full relink) rather than only re-prompting generation, since the error means selection was wrong. Few-shot exemplars + retrieval (the rest of P3) deferred to a focused pass. |
 
 ---
 

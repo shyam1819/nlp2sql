@@ -13,24 +13,30 @@ wrap the same `build_graph()` later without changes to the agent.
 > (writes `assets/graph.png` + `assets/graph.mmd`).
 
 ```
-relevance (1) ─not relevant─────────────────► refuse ─┐
-   │ relevant                                          │
-clarification (1b) ─needs info─► ask user ─────────────┤
-   │ ok                                                │
-rephrase (2) ─► table_select (3) ─► column_select (4)  │
-                                         │             │
-            ┌───────────────► sql_generation (5) ◄──┐  │
-            │                        │              │  │
-   retry ≤ MAX_RETRIES        schema_guard (6) ─────┘  │  (unsafe → regenerate)
-            │                        │ safe         │  │
-            └──────────────────► execute (7) ───────┘  │  (db error → regenerate)
-                                     │ ok / exhausted   │
-                                  answer (8) ───────────┤
-                                                        ▼
-                                                  ingest ─► END
+relevance (1) ─not relevant──────────────────────────► refuse ─┐
+   │ relevant                                                   │
+clarification (1b) ─needs info─► ask user ──────────────────────┤
+   │ ok                                                         │
+rephrase (2) ─► table_select (3) ─► column_select (4)           │
+                                         │                      │
+            ┌───────────────► sql_generation (5) ◄──┐ ◄──┐      │
+            │                        │              │    │      │
+   mechanical retry          schema_guard (6) ──────┘    │      │  (unsafe → regenerate)
+   (MAX_RETRIES)                     │ safe              │      │
+            │                     verify (6b) ───────────┘      │  (incorrect → regenerate, semantic retry)
+            │                        │ sound / exhausted  ▲      │
+            └──────────────────► execute (7) ────────────┘      │  (db error → regenerate; missing table → relink)
+                                     │ ok / exhausted            │
+                                  answer (8) ───────────────────┤
+                                                                ▼
+                                                          ingest ─► END
 ```
 
-- **Nodes 6 (guard) and 7 (execute) share one retry counter** (`MAX_RETRIES`, default 2).
+- **Two retry budgets**: mechanical (`MAX_RETRIES`, guard + execute) and semantic
+  (`LOGIC_RETRY_MAX`, verification). A `no such table/column` error relinks via
+  table selection.
+- **Verification (6b)** reviews analytical correctness (fan-out, grouping,
+  filters) before execute — *safe + runnable ≠ correct*.
 - **Every** terminal path (answered / refused / clarification / failed) routes
   through `ingest`, so the conversation store records a complete history.
 

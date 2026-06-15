@@ -13,6 +13,7 @@ PROMPT_NAMES = [
     "column_selection.system", "column_selection.user",
     "sql_generation.system", "sql_generation.user",
     "guard.system", "guard.user",
+    "verify.system", "verify.user",
     "answer.system", "answer.user",
 ]
 
@@ -24,9 +25,12 @@ CONTEXT = dict(
     schema="TABLE film(...)",
     columns={"film": ["title", "rating"]},
     sql="SELECT 1",
+    dialect="sqlite",
+    max_rows=1000,
     row_count=1,
     rows='[{"a": 1}]',
     guard_feedback="",
+    verification_feedback="",
     execution_error="",
     previous_sql="",
 )
@@ -50,7 +54,7 @@ def test_catalog_loop_renders_each_table():
 
 def test_feedback_conditional_included_only_on_error():
     base = dict(schema="s", columns={"film": ["title"]}, question="q",
-               guard_feedback="", execution_error="", previous_sql="")
+               guard_feedback="", verification_feedback="", execution_error="", previous_sql="")
     clean = prompts.render("sql_generation.user", **base)
     assert "failed to execute" not in clean
 

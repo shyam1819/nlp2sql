@@ -39,7 +39,7 @@ class ReadOnlyDB:
         return con
 
     def execute_select(
-        self, sql: str, *, max_rows: int = 200, timeout_s: float = 10.0
+        self, sql: str, *, max_rows: int = 1000, timeout_s: float = 10.0
     ) -> list[dict[str, Any]]:
         """Run a SELECT and return rows as dicts.
 
@@ -52,5 +52,19 @@ class ReadOnlyDB:
             cur = con.execute(sql)
             rows = cur.fetchmany(max_rows)
             return [dict(r) for r in rows]
+        finally:
+            con.close()
+
+    def explain(self, sql: str, *, timeout_s: float = 10.0) -> None:
+        """Compile-check a query without running it (read-only dry run).
+
+        Raises sqlite3.Error if the query references missing tables/columns or is
+        otherwise invalid — the verification node uses this as a cheap pre-flight
+        before the full execute.
+        """
+        con = self._connect()
+        try:
+            con.execute(f"PRAGMA busy_timeout = {int(timeout_s * 1000)}")
+            con.execute(f"EXPLAIN QUERY PLAN {sql}").fetchall()
         finally:
             con.close()

@@ -41,6 +41,7 @@ from .nodes.rephrase import rephrase_node
 from .nodes.schema_guard import schema_guard_node
 from .nodes.sql_generation import sql_generation_node
 from .nodes.table_selection import table_selection_node
+from .nodes.verify import verify_node
 from .state import AgentState
 
 
@@ -55,18 +56,31 @@ def _after_clarification(state: AgentState) -> str:
 
 def _after_guard(state: AgentState) -> str:
     if state.get("guard_passed"):
-        return "execute"
+        return "verify"
     if state.get("retry_count", 0) <= get_settings().max_retries:
         return "sql_generation"
-    return "answer"  # budget exhausted, no safe query
+    return "answer"  # mechanical budget exhausted, no safe query
+
+
+def _after_verify(state: AgentState) -> str:
+    if state.get("verification_passed"):
+        return "execute"
+    if state.get("logic_retry_count", 0) <= get_settings().logic_retry_max:
+        return "sql_generation"  # regenerate with the correctness feedback
+    return "execute"  # semantic budget exhausted: run best-effort, answer caveats
 
 
 def _after_execute(state: AgentState) -> str:
     if not state.get("execution_error"):
         return "answer"
-    if state.get("retry_count", 0) <= get_settings().max_retries:
-        return "sql_generation"
-    return "answer"  # budget exhausted, surface the db error
+    if state.get("retry_count", 0) > get_settings().max_retries:
+        return "answer"  # mechanical budget exhausted, surface the db error
+    # Schema-linking repair: a missing table/column means selection was wrong, so
+    # re-select tables (full schema relink) rather than just re-prompting generation.
+    err = state["execution_error"].lower()
+    if "no such table" in err or "no such column" in err:
+        return "table_selection"
+    return "sql_generation"
 
 
 def build_graph(checkpointer=None):
@@ -82,6 +96,7 @@ def build_graph(checkpointer=None):
     g.add_node("column_selection", column_selection_node)
     g.add_node("sql_generation", sql_generation_node)
     g.add_node("schema_guard", schema_guard_node)
+    g.add_node("verify", verify_node)
     g.add_node("execute", execute_node)
     g.add_node("answer", answer_node)
     g.add_node("ingest", ingest_node)
@@ -96,9 +111,12 @@ def build_graph(checkpointer=None):
     g.add_edge("column_selection", "sql_generation")
     g.add_edge("sql_generation", "schema_guard")
     g.add_conditional_edges("schema_guard", _after_guard,
-                            {"execute": "execute", "sql_generation": "sql_generation", "answer": "answer"})
+                            {"verify": "verify", "sql_generation": "sql_generation", "answer": "answer"})
+    g.add_conditional_edges("verify", _after_verify,
+                            {"execute": "execute", "sql_generation": "sql_generation"})
     g.add_conditional_edges("execute", _after_execute,
-                            {"answer": "answer", "sql_generation": "sql_generation"})
+                            {"answer": "answer", "sql_generation": "sql_generation",
+                             "table_selection": "table_selection"})
     g.add_edge("answer", "ingest")
     g.add_edge("ingest", END)
 
