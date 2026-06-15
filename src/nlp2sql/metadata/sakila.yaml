@@ -1,0 +1,112 @@
+# Semantic descriptions for the Sakila (movie-rental) schema.
+# SQLite has no native column comments, so they live here. The provider merges
+# these into the schema context the agent sees (table headers + per-column).
+# Add/adjust freely — no code change needed.
+
+film:
+  description: "Catalog of films available to rent."
+  columns:
+    film_id: "Primary key for a film."
+    title: "Display title of the film."
+    description: "Free-text plot summary."
+    release_year: "Year the film was released (stored as text)."
+    language_id: "FK to language; the film's spoken language."
+    original_language_id: "FK to language; original language if dubbed (often null)."
+    rental_duration: "Default rental period length, in days."
+    rental_rate: "Cost to rent the film for one rental_duration period (USD)."
+    length: "Film runtime in minutes."
+    replacement_cost: "Amount charged if the film is not returned (USD)."
+    rating: "MPAA rating: G, PG, PG-13, R, NC-17."
+
+actor:
+  description: "Actors who appear in films."
+  columns:
+    actor_id: "Primary key for an actor."
+    first_name: "Actor's first name."
+    last_name: "Actor's last name (surname)."
+
+category:
+  description: "Film genres / categories (e.g. Action, Comedy)."
+  columns:
+    category_id: "Primary key for a category."
+    name: "Genre name."
+
+language:
+  description: "Languages a film can be in."
+  columns:
+    language_id: "Primary key for a language."
+    name: "Language name (e.g. English)."
+
+inventory:
+  description: "Physical copies of films held at stores."
+  columns:
+    inventory_id: "Primary key for one physical copy."
+    film_id: "FK to film; which title this copy is."
+    store_id: "FK to store; where this copy is held."
+
+rental:
+  description: "Rental transactions: a customer renting one inventory copy."
+  columns:
+    rental_id: "Primary key for a rental."
+    rental_date: "Timestamp when the copy was rented out."
+    inventory_id: "FK to inventory; the copy rented."
+    customer_id: "FK to customer; who rented it."
+    return_date: "Timestamp when returned; null if still out."
+    staff_id: "FK to staff; who processed the rental."
+
+payment:
+  description: "Payments customers make for rentals."
+  columns:
+    payment_id: "Primary key for a payment."
+    customer_id: "FK to customer; who paid."
+    staff_id: "FK to staff; who took the payment."
+    rental_id: "FK to rental; what was paid for."
+    amount: "Payment amount (USD). Sum this for revenue."
+    payment_date: "Timestamp of the payment; use for time-based revenue."
+
+customer:
+  description: "Customers of the rental stores."
+  columns:
+    customer_id: "Primary key for a customer."
+    store_id: "FK to store; the customer's home store."
+    first_name: "Customer's first name."
+    last_name: "Customer's last name (surname)."
+    email: "Customer email address."
+    address_id: "FK to address."
+    active: "1 if the customer account is active, else 0."
+    create_date: "When the customer record was created."
+
+staff:
+  description: "Store staff members."
+  columns:
+    staff_id: "Primary key for a staff member."
+    store_id: "FK to store; where they work."
+    active: "1 if the staff account is active, else 0."
+
+store:
+  description: "Physical rental stores."
+  columns:
+    store_id: "Primary key for a store."
+    manager_staff_id: "FK to staff; the store manager."
+    address_id: "FK to address; the store location."
+
+address:
+  description: "Postal addresses for customers, staff, and stores."
+  columns:
+    address_id: "Primary key for an address."
+    district: "State/province/region."
+    city_id: "FK to city."
+    postal_code: "ZIP / postal code."
+
+city:
+  description: "Cities, each belonging to a country."
+  columns:
+    city_id: "Primary key for a city."
+    city: "City name."
+    country_id: "FK to country."
+
+country:
+  description: "Countries."
+  columns:
+    country_id: "Primary key for a country."
+    country: "Country name."

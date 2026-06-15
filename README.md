@@ -80,6 +80,25 @@ is auto-injected from `fragments/domain.j2`; `StrictUndefined` flags missing
 variables. Point `PROMPTS_DIR` at another folder to override the packaged prompts.
 Structural output schemas stay in `llm/schemas.py`.
 
+## Semantic metadata (column descriptions)
+
+The agent's schema context is enriched with **table/column descriptions** so it
+understands what columns *mean*, not just their names. Descriptions come through
+a pluggable `SemanticMetadataProvider` ([metadata/](src/nlp2sql/metadata)), merged
+by priority — so warehouse-native sources slot in later without code changes:
+
+```
+catalog / dbt  →  native engine comments  →  file sidecar  →  name heuristics
+(Unity, Snowflake,   (Snowflake/Databricks/    (metadata/        (fallback)
+ Atlan, ...)          BigQuery COMMENT,         sakila.yaml)
+                      SQL Server ext. props)
+```
+
+SQLite has no native column comments, so the seed DB uses a YAML **sidecar**
+([metadata/sakila.yaml](src/nlp2sql/metadata/sakila.yaml)) — edit it to tune
+descriptions, no code change. Point `METADATA_PATH` at another `.yaml`/`.json`
+for a different database.
+
 ## Setup
 
 ```bash
@@ -121,6 +140,7 @@ src/nlp2sql/
 ├── db/                  # read-only connection + cached introspection
 ├── persistence/         # ConversationStore (turn-level audit log)
 ├── prompts/             # Jinja2 prompt templates (.j2) — edit without touching code
+├── metadata/            # SemanticMetadataProvider + sakila.yaml (column descriptions)
 ├── llm/                 # chat model (init_chat_model) + prompt loader + schemas
 ├── nodes/               # one module per pipeline node
 ├── sql_safety.py        # deterministic static SELECT guard

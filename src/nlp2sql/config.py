@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # directory to override prompts without touching the package.
     prompts_dir: str = ""
 
+    # Semantic metadata sidecar (table/column descriptions). Empty -> the packaged
+    # `nlp2sql/metadata/sakila.yaml`. Point at a .yaml/.json for another DB.
+    metadata_path: str = ""
+
     # Database under query (opened read-only)
     db_path: str = "data/sakila.db"
 

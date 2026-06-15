@@ -11,13 +11,15 @@ is called at startup so the introspection nodes never touch SQLite at runtime.
 from __future__ import annotations
 
 from ..cache import Cache, get_cache
+from ..metadata import get_metadata_provider
 from .connection import ReadOnlyDB
 
 CATALOG_KEY = "catalog:all"
 _SCHEMA_KEY = "schema:{table}"
 
-# Hand-written, one-line descriptions of the Sakila movie-rental schema.
-# These are the *menu* the table-selection node reads from.
+# Built-in fallback descriptions + the registry of known tables (warm_cache and
+# the catalog iterate these). Per-table/column descriptions can be overridden by
+# the semantic metadata provider (sidecar/dbt/native comments — see ..metadata).
 TABLE_DESCRIPTIONS: dict[str, str] = {
     "film": "Catalog of films: title, description, release_year, rental_rate, length, rating, language.",
     "film_text": "Full-text mirror of film title/description (search helper).",
@@ -39,13 +41,18 @@ TABLE_DESCRIPTIONS: dict[str, str] = {
 
 
 def get_catalog(cache: Cache | None = None) -> dict[str, str]:
-    """Return {table: description}, cached."""
+    """Return {table: description}, cached. Provider descriptions override the builtin."""
     cache = cache or get_cache()
     cached = cache.get(CATALOG_KEY)
     if cached is not None:
         return cached
-    cache.set(CATALOG_KEY, TABLE_DESCRIPTIONS)
-    return TABLE_DESCRIPTIONS
+    provider = get_metadata_provider()
+    catalog = {
+        table: (provider.table_description(table) or builtin)
+        for table, builtin in TABLE_DESCRIPTIONS.items()
+    }
+    cache.set(CATALOG_KEY, catalog)
+    return catalog
 
 
 def get_table_schema(table: str, *, db: ReadOnlyDB | None = None,
@@ -86,10 +93,13 @@ def render_schema(tables: list[str], *, db: ReadOnlyDB | None = None,
                   cache: Cache | None = None) -> str:
     """Render the schema of `tables` as compact text for an LLM prompt."""
     db = db or ReadOnlyDB()
+    provider = get_metadata_provider()
     blocks: list[str] = []
     for t in tables:
         schema = get_table_schema(t, db=db, cache=cache)
-        lines = [f"TABLE {t} ({TABLE_DESCRIPTIONS.get(t, '')})"]
+        table_desc = provider.table_description(t) or TABLE_DESCRIPTIONS.get(t, "")
+        col_desc = provider.column_descriptions(t)
+        lines = [f"TABLE {t} ({table_desc})"]
         for c in schema["columns"]:
             flags = []
             if c["pk"]:
@@ -97,7 +107,9 @@ def render_schema(tables: list[str], *, db: ReadOnlyDB | None = None,
             if c["notnull"]:
                 flags.append("NOT NULL")
             suffix = f"  [{', '.join(flags)}]" if flags else ""
-            lines.append(f"  - {c['name']} {c['type']}{suffix}")
+            description = col_desc.get(c["name"])
+            note = f" — {description}" if description else ""
+            lines.append(f"  - {c['name']} {c['type']}{suffix}{note}")
         for fk in schema["foreign_keys"]:
             lines.append(f"  FK {fk['column']} -> {fk['references']}")
         blocks.append("\n".join(lines))
