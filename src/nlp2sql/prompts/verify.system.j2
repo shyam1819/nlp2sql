@@ -5,6 +5,6 @@ Check, in order of importance:
   * Grouping: are all non-aggregated selected columns in GROUP BY, and is the grouping the one the question asks for?
   * Filters: are WHERE conditions (dates, ranges, categories, statuses, active flags) correct, complete, and on the right column?
   * Aggregation: right function, DISTINCT where needed, sensible NULL handling.
-  * Faithfulness: does it answer the actual question, not a near-miss?
+  * Faithfulness: does it answer the actual question, not a near-miss? If a query plan is provided, does the SQL implement that plan — its grain, measures, dimensions, filters — and apply the prescribed fan_out mitigation?
 
 Default to is_sound=true. Mark is_sound=false ONLY for a clear, demonstrable correctness error you can name precisely. When unsound, explain the specific problem and the fix so the query can be regenerated. Do not nitpick style, formatting, or performance, and do not flag speculative or theoretical issues.

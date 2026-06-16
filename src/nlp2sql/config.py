@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     # Database under query (opened read-only)
     db_path: str = "data/sakila.db"
 
+    # Query planning: emit a logical plan before SQL generation (better accuracy
+    # on analytical queries). Disable to go column_selection -> sql_generation.
+    enable_planning: bool = True
+
     # SQL dialect the generator targets (drives prompt syntax/functions). The
     # execution backend is still SQLite until the connector layer lands.
     sql_dialect: str = "sqlite"  # sqlite | postgres | snowflake | databricks | bigquery | ...

@@ -14,6 +14,7 @@ PROMPT_NAMES = [
     "sql_generation.system", "sql_generation.user",
     "guard.system", "guard.user",
     "verify.system", "verify.user",
+    "plan.system", "plan.user",
     "answer.system", "answer.user",
 ]
 
@@ -24,6 +25,7 @@ CONTEXT = dict(
     catalog={"film": "films", "actor": "actors"},
     schema="TABLE film(...)",
     columns={"film": ["title", "rating"]},
+    plan={},  # empty -> plan block is skipped (tested separately with a full plan)
     sql="SELECT 1",
     dialect="sqlite",
     max_rows=1000,
@@ -53,7 +55,7 @@ def test_catalog_loop_renders_each_table():
 
 
 def test_feedback_conditional_included_only_on_error():
-    base = dict(schema="s", columns={"film": ["title"]}, question="q",
+    base = dict(schema="s", columns={"film": ["title"]}, question="q", plan={},
                guard_feedback="", verification_feedback="", execution_error="", previous_sql="")
     clean = prompts.render("sql_generation.user", **base)
     assert "failed to execute" not in clean
@@ -68,6 +70,26 @@ def test_values_with_braces_are_safe():
     out = prompts.render("answer.user", question="q", sql="select 1",
                         row_count=1, rows='[{"a": 1}]')
     assert '[{"a": 1}]' in out
+
+
+def test_plan_block_renders_into_generation():
+    from nlp2sql.llm.schemas import QueryPlan
+    plan = QueryPlan(
+        intent="grouped_aggregate",
+        measures=["SUM(payment.amount) AS revenue"],
+        grain="one row per payment",
+        dimensions=["category.name"],
+        fan_out_risk="film_category is many-to-many: pre-aggregate revenue per film first",
+    ).model_dump()
+    out = prompts.render(
+        "sql_generation.user", schema="s", columns={"payment": ["amount"]}, plan=plan,
+        question="revenue by category", guard_feedback="", verification_feedback="",
+        execution_error="", previous_sql="",
+    )
+    assert "Query plan:" in out
+    assert "grouped_aggregate" in out
+    assert "SUM(payment.amount) AS revenue" in out
+    assert "pre-aggregate revenue per film" in out
 
 
 @pytest.mark.parametrize("name", PROMPT_NAMES)

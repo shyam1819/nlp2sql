@@ -70,3 +70,17 @@ to the graph; then implement incrementally, each config-gated and off by default
      conversation memory (INV-6).
   4. **Decomposition / orchestrator** — split complex multi-part questions into
      sub-queries, solve, compose.
+
+---
+
+## Future add-ons
+
+### Meta/catalog discoverability path  *(deferred — fit not yet clear)*
+
+A deliberate path for meta questions ("what tables/data are available?", "what can
+I ask?", "what do you know about customers?") answered directly from curated
+metadata (`get_catalog()` + D-15 descriptions + example questions), NO SQL. Extend
+the relevance classifier (D-20) with a `meta` category → a describe node. Bonus:
+block `SELECT ... FROM sqlite_master` in the guard (currently leaks system schema).
+Today meta questions are handled accidentally/inconsistently. Revisit when
+discoverability/onboarding becomes a priority.

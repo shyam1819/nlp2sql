@@ -35,6 +35,11 @@ class AgentState(TypedDict, total=False):
     selected_columns: dict[str, list[str]]
     schema_context: str  # rendered DDL/columns for the selected tables
 
+    # --- Node 4b: query planning ---
+    # The logical query plan (QueryPlan.model_dump()) the generator renders and
+    # the verifier checks against. {} when planning is disabled.
+    query_plan: dict[str, Any]
+
     # --- Node 5: SQL generation ---
     sql_query: str
 

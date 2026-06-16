@@ -54,6 +54,60 @@ class GuardDecision(BaseModel):
     reason: str = Field(description="If unsafe, what is wrong so the generator can fix it.")
 
 
+class QueryPlan(BaseModel):
+    """A dialect-agnostic logical plan for an analytical query.
+
+    The planner fills these slots from the question + schema; the generator
+    renders them into SQL; the verifier checks the SQL against them. Slots map
+    to the analytical grammar (intent → measures/grain/dimensions/filters →
+    derived → order). Concrete column/table references where possible.
+    """
+
+    intent: Literal[
+        "lookup", "simple_aggregate", "grouped_aggregate", "ranking_topn",
+        "time_series", "share_of_total", "period_comparison", "threshold",
+        "distribution",
+    ] = Field(description="The analytical archetype of the question.")
+    measures: list[str] = Field(
+        default_factory=list,
+        description="What to aggregate, as expressions, e.g. 'SUM(payment.amount) AS revenue'. Empty for pure lookups.",
+    )
+    grain: str = Field(
+        default="",
+        description="What one row of the fact/base table represents, e.g. 'one row per payment'. The fan-out anchor.",
+    )
+    dimensions: list[str] = Field(
+        default_factory=list, description="Columns to GROUP BY / break down by."
+    )
+    filters: list[str] = Field(
+        default_factory=list, description="WHERE conditions (scope), e.g. \"film.rating = 'PG-13'\"."
+    )
+    time_grain: str = Field(
+        default="", description="Time bucket + range if temporal, e.g. 'by month of payment_date in 2005'."
+    )
+    derived: list[str] = Field(
+        default_factory=list,
+        description="Window/comparative calcs: ranks, share-of-total, period-over-period.",
+    )
+    having: list[str] = Field(
+        default_factory=list, description="Post-aggregate filters (HAVING)."
+    )
+    order_by: str = Field(default="", description="Ordering, e.g. 'revenue DESC'.")
+    limit: str = Field(default="", description="Row limit, e.g. '5'; empty if none.")
+    join_path: list[str] = Field(
+        default_factory=list,
+        description="Joins from fact to dimensions with keys, e.g. 'payment→rental on rental_id'.",
+    )
+    fan_out_risk: str = Field(
+        default="none",
+        description="Which joins could multiply a measure and the mitigation (pre-aggregate in a CTE / COUNT(DISTINCT)); 'none' if safe.",
+    )
+    assumptions: list[str] = Field(
+        default_factory=list,
+        description="Assumptions made, especially metric definitions, e.g. 'revenue := SUM(payment.amount)'.",
+    )
+
+
 class VerificationDecision(BaseModel):
     is_sound: bool = Field(
         description="True if the query correctly and faithfully answers the question, with no correctness problems."

@@ -42,6 +42,7 @@ def run_turn(graph, question: str, thread_id: str) -> dict:
             "required_tables": [],
             "selected_columns": {},
             "schema_context": "",
+            "query_plan": {},
             "sql_query": "",
             "guard_passed": False,
             "guard_feedback": "",

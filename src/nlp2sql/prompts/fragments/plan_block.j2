@@ -1,0 +1,40 @@
+{% if plan %}
+Query plan:
+  intent: {{ plan.intent }}
+{% if plan.measures %}
+  measures: {{ plan.measures | join('; ') }}
+{% endif %}
+{% if plan.grain %}
+  grain: {{ plan.grain }}
+{% endif %}
+{% if plan.dimensions %}
+  dimensions: {{ plan.dimensions | join('; ') }}
+{% endif %}
+{% if plan.filters %}
+  filters: {{ plan.filters | join('; ') }}
+{% endif %}
+{% if plan.time_grain %}
+  time: {{ plan.time_grain }}
+{% endif %}
+{% if plan.derived %}
+  derived: {{ plan.derived | join('; ') }}
+{% endif %}
+{% if plan.having %}
+  having: {{ plan.having | join('; ') }}
+{% endif %}
+{% if plan.order_by %}
+  order_by: {{ plan.order_by }}
+{% endif %}
+{% if plan.limit %}
+  limit: {{ plan.limit }}
+{% endif %}
+{% if plan.join_path %}
+  join_path: {{ plan.join_path | join('; ') }}
+{% endif %}
+{% if plan.fan_out_risk %}
+  fan_out_risk: {{ plan.fan_out_risk }}
+{% endif %}
+{% if plan.assumptions %}
+  assumptions: {{ plan.assumptions | join('; ') }}
+{% endif %}
+{% endif %}

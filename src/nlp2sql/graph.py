@@ -40,6 +40,7 @@ from .nodes.relevance import relevance_node
 from .nodes.rephrase import rephrase_node
 from .nodes.schema_guard import schema_guard_node
 from .nodes.sql_generation import sql_generation_node
+from .nodes.plan import plan_node
 from .nodes.table_selection import table_selection_node
 from .nodes.verify import verify_node
 from .state import AgentState
@@ -108,7 +109,13 @@ def build_graph(checkpointer=None):
                             {"rephrase": "rephrase", "ingest": "ingest"})
     g.add_edge("rephrase", "table_selection")
     g.add_edge("table_selection", "column_selection")
-    g.add_edge("column_selection", "sql_generation")
+    # Plan the query before generating SQL (config-gated); otherwise go direct.
+    if get_settings().enable_planning:
+        g.add_node("plan", plan_node)
+        g.add_edge("column_selection", "plan")
+        g.add_edge("plan", "sql_generation")
+    else:
+        g.add_edge("column_selection", "sql_generation")
     g.add_edge("sql_generation", "schema_guard")
     g.add_conditional_edges("schema_guard", _after_guard,
                             {"verify": "verify", "sql_generation": "sql_generation", "answer": "answer"})

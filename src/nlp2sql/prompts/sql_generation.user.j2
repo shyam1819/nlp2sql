@@ -5,6 +5,7 @@ Relevant columns:
 {% for table, cols in columns.items() %}
   {{ table }}: {{ cols | join(', ') }}
 {% endfor %}
+{% include "fragments/plan_block.j2" %}
 
 Question: {{ question }}
 {% if guard_feedback %}
