@@ -36,7 +36,9 @@ relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → colum
    → sql_generation(5) → schema_guard(6) → verify(6b) → execute(7) → answer(8) → ingest → END
 ```
 
-- **Relevance/clarification** short-circuit to `ingest` (refusal / follow-up).
+- **Relevance** is history-aware: it classifies the latest message as
+  on_topic / follow_up / out_of_scope, so follow-ups aren't refused (D-20).
+  Relevance/clarification short-circuit to `ingest` (refusal / follow-up).
 - **Mechanical loop** (`MAX_RETRIES`): guard rejection and execution errors loop
   back to generation; a `no such table/column` error relinks via `table_select`.
 - **Semantic loop** (`LOGIC_RETRY_MAX`): the verification node (6b) sends
@@ -140,6 +142,7 @@ relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → colum
 | D-17 | **Dialect-aware generation + configurable row cap** (P2) | Accepted | `SQL_DIALECT` parameterizes generated syntax (default `sqlite`; ready for Snowflake/Databricks/BigQuery via the connector layer); prompt encourages CTEs/window functions and fan-out care. `MAX_RESULT_ROWS` (default 1000) replaces the hard 200 cap; truncation is flagged in the answer. Execution backend stays SQLite until connectors land. |
 | D-18 | **Two retry budgets: mechanical + semantic** (P5), supersedes D-8 | Accepted | `MAX_RETRIES` (default 3) covers guard + execute; `LOGIC_RETRY_MAX` (default 2) covers verification. Separate so a logic fix isn't starved by mechanical retries. Revises INV-3. |
 | D-19 | **Schema-linking repair routing** (P3, partial) | Accepted | A `no such table/column` execution error routes back to `table_selection` (full relink) rather than only re-prompting generation, since the error means selection was wrong. Few-shot exemplars + retrieval (the rest of P3) deferred to a focused pass. |
+| D-20 | **History-aware relevance gate** (3-way classification) | Accepted | The relevance node now reads conversation history and classifies the latest message as `on_topic` / `follow_up` / `out_of_scope` (only the last is refused). Fixes genuine follow-ups (verification, drill-down, "does that add up?") being refused because, read alone, they name no table. Out-of-scope messages are still refused mid-thread. |
 
 ---
 

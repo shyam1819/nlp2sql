@@ -47,3 +47,26 @@ SQLite. Build a `Connector` interface (connect, execute_select, explain, introsp
 Databricks / BigQuery), selected by config. Must preserve INV-1/INV-2 per engine.
 This is where native-comment metadata adapters (D-15) and the deterministic
 governance/policy gate (INV-14) plug in.
+
+## 5. Audit & adopt proven agentic design patterns  *(broad — design note first)*
+
+Map the agent against proven agentic patterns, then fill the high-value gaps.
+First deliverable: a short design note + a `PROJECT.md` decision mapping patterns
+to the graph; then implement incrementally, each config-gated and off by default.
+
+- **Already present** (don't redo): prompt chaining (node pipeline), routing
+  (relevance/clarification), reflection / evaluator-optimizer (verify node 6b +
+  retries), human-in-the-loop (clarification).
+- **Overlaps:** planning = Task #2; RAG / schema-linking + exemplars = Task #3.
+- **Gaps to add, prioritized:**
+  1. **Tool use / grounding** *(biggest analytics win)* — read-only tools to
+     inspect the DB instead of guessing: distinct column values (resolve filter
+     literals like `'Comedy'`, `'PG-13'`), sample rows, sanity COUNTs. Stops
+     invented WHERE values. Stays within INV-1/INV-2/INV-14.
+  2. **Self-consistency** — sample N candidate SQLs, execute, pick by result
+     consensus / verifier score. Configurable N (default 1 = off).
+  3. **Episodic / long-term memory** — persist successful question→SQL pairs;
+     reuse as exemplars (feeds #3) and as a repeat-question cache. Distinct from
+     conversation memory (INV-6).
+  4. **Decomposition / orchestrator** — split complex multi-part questions into
+     sub-queries, solve, compose.

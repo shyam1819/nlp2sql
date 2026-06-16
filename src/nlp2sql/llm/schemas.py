@@ -9,12 +9,24 @@ open-ended `dict`; model per-key data as a list of objects (see ColumnSelection)
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
 class RelevanceDecision(BaseModel):
-    is_relevant: bool = Field(description="True if the question can be answered from the database.")
-    reason: str = Field(description="Short justification; if not relevant, a user-facing refusal.")
+    classification: Literal["on_topic", "follow_up", "out_of_scope"] = Field(
+        description=(
+            "on_topic: a new question answerable with a SQL query over the database. "
+            "follow_up: refers to or builds on the previous turns or their results "
+            "(verification, drill-down, 'does that add up?', 'why?', 'and for store 1?') "
+            "— in scope even if, read alone, it doesn't mention the database. "
+            "out_of_scope: unrelated to the database (greetings, math, other domains)."
+        )
+    )
+    reason: str = Field(
+        description="Brief justification; for out_of_scope, a polite user-facing refusal."
+    )
 
 
 class ClarificationDecision(BaseModel):
