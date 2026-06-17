@@ -17,7 +17,7 @@ relevance (1) ─not relevant─────────────────
    │ relevant                                                   │
 clarification (1b) ─needs info─► ask user ──────────────────────┤
    │ ok                                                         │
-rephrase (2) ─► table_select (3) ─► column_select (4)           │
+rephrase (2) ─► table_select (3) ─► column_select (4) ─► plan (4b)
                                          │                      │
             ┌───────────────► sql_generation (5) ◄──┐ ◄──┐      │
             │                        │              │    │      │
@@ -35,6 +35,10 @@ rephrase (2) ─► table_select (3) ─► column_select (4)           │
 - **Two retry budgets**: mechanical (`MAX_RETRIES`, guard + execute) and semantic
   (`LOGIC_RETRY_MAX`, verification). A `no such table/column` error relinks via
   table selection.
+- **Planning (4b)** emits a typed logical plan (intent, measures, grain,
+  dimensions, filters, fan-out mitigation) that the generator renders and the
+  verifier checks against — drives grain-first CTEs by construction.
+  Config-gated (`ENABLE_PLANNING`).
 - **Verification (6b)** reviews analytical correctness (fan-out, grouping,
   filters) before execute — *safe + runnable ≠ correct*.
 - **Every** terminal path (answered / refused / clarification / failed) routes

@@ -33,7 +33,7 @@ a single terminal ingest step. See `assets/graph.png` for the rendered graph.
 
 ```
 relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → column_select(4)
-   → sql_generation(5) → schema_guard(6) → verify(6b) → execute(7) → answer(8) → ingest → END
+   → plan(4b) → sql_generation(5) → schema_guard(6) → verify(6b) → execute(7) → answer(8) → ingest → END
 ```
 
 - **Relevance** is history-aware: it classifies the latest message as
@@ -143,6 +143,7 @@ relevance(1) → clarification(1b) → rephrase(2) → table_select(3) → colum
 | D-18 | **Two retry budgets: mechanical + semantic** (P5), supersedes D-8 | Accepted | `MAX_RETRIES` (default 3) covers guard + execute; `LOGIC_RETRY_MAX` (default 2) covers verification. Separate so a logic fix isn't starved by mechanical retries. Revises INV-3. |
 | D-19 | **Schema-linking repair routing** (P3, partial) | Accepted | A `no such table/column` execution error routes back to `table_selection` (full relink) rather than only re-prompting generation, since the error means selection was wrong. Few-shot exemplars + retrieval (the rest of P3) deferred to a focused pass. |
 | D-20 | **History-aware relevance gate** (3-way classification) | Accepted | The relevance node now reads conversation history and classifies the latest message as `on_topic` / `follow_up` / `out_of_scope` (only the last is refused). Fixes genuine follow-ups (verification, drill-down, "does that add up?") being refused because, read alone, they name no table. Out-of-scope messages are still refused mid-thread. |
+| D-21 | **Query planning node** (4b) before generation, with a typed `QueryPlan` contract | Accepted | Separates *what to compute* from *how to write it* (the classify→decompose stage of schema-link→plan→generate→self-correct). Planner emits a logical plan (intent archetype, measures, grain, dimensions, filters, derived/window, fan_out_risk + mitigation, assumptions); the generator renders it and the verifier checks SQL against it. Drives grain-first fan-out mitigation (pre-aggregate in a CTE) by construction. Config-gated (`ENABLE_PLANNING`, default on) — disable to go column_selection→generation. Plan slots map to the BI semantic-layer model and are the hook for the future metric/business layer. |
 
 ---
 

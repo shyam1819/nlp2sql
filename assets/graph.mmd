@@ -16,15 +16,17 @@ graph TD;
 	execute(execute)
 	answer(answer)
 	ingest(ingest)
+	plan(plan)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> relevance;
 	answer --> ingest;
 	clarification -.-> ingest;
 	clarification -.-> rephrase;
-	column_selection --> sql_generation;
+	column_selection --> plan;
 	execute -.-> answer;
 	execute -.-> sql_generation;
 	execute -.-> table_selection;
+	plan --> sql_generation;
 	relevance -.-> clarification;
 	relevance -.-> ingest;
 	rephrase --> table_selection;

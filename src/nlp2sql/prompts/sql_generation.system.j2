@@ -3,6 +3,7 @@ Rules:
   * Output ONLY the SQL, no markdown fences, no commentary.
   * Exactly one statement, and it MUST be a SELECT (no INSERT/UPDATE/DELETE/DROP/ALTER/CREATE/PRAGMA/ATTACH). CTEs (WITH ... SELECT) are allowed.
   * Use only the provided tables and columns; join on the foreign keys shown.
+  * If a query plan is provided, implement it faithfully — its grain, measures, dimensions, filters, ordering — and apply its fan_out mitigation (pre-aggregate the measure in a CTE before joining dimensions, or COUNT(DISTINCT)).
   * Join fan-out: when aggregating (SUM/COUNT/AVG) across one-to-many or many-to-many joins, make sure rows are counted at the correct grain and not double-counted — aggregate sub-totals in a CTE first if needed, or use COUNT(DISTINCT ...).
   * Prefer CTEs and window functions for ranking, running totals, shares of total, and multi-level grouping.
   * Add LIMIT {{ max_rows }} for row listings; omit LIMIT for aggregate/summary queries.

@@ -47,6 +47,7 @@ def verify_node(state: AgentState) -> dict:
             "verify.user",
             question=state.get("rephrased_question") or state.get("question", ""),
             schema=state.get("schema_context", ""),
+            plan=state.get("query_plan", {}),
             sql=sql,
         ),
         VerificationDecision,

@@ -30,6 +30,7 @@ def sql_generation_node(state: AgentState) -> dict:
         "sql_generation.user",
         schema=state.get("schema_context", ""),
         columns=state.get("selected_columns", {}),
+        plan=state.get("query_plan", {}),
         question=question,
         guard_feedback=state.get("guard_feedback", ""),
         verification_feedback=state.get("verification_feedback", ""),
