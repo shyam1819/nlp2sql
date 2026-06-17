@@ -71,6 +71,39 @@ to the graph; then implement incrementally, each config-gated and off by default
   4. **Decomposition / orchestrator** — split complex multi-part questions into
      sub-queries, solve, compose.
 
+## 6. Collect a concrete analytics dataset (demo + eval)  *(do before #7)*
+
+Sakila is fine for dev but small/OLTP-shaped. For analytics demo + evaluation we
+need a realistic analytical dataset and a labeled question set:
+
+1. **Analytics demo DB** — star/snowflake (fact + dimensions, time dimension, real
+   volume). Candidates: **TPC-H / TPC-DS** (canonical analytical benchmarks,
+   generatable via **DuckDB** at any scale — columnar/OLAP, supports our CTE/window
+   SQL, aligns with the connector layer #4), Contoso Retail DW, or Olist e-commerce
+   (Kaggle). Ship with a D-15 metadata sidecar.
+2. **Eval set** — `question → gold SQL → expected result`. Adopt a benchmark
+   (**BIRD** = most analytics/real-world; **Spider** = cross-domain standard) or
+   hand-curate ~30–50 golden analytical questions across the archetypes (lookup,
+   aggregate, top-N, time series, share-of-total, period-over-period, threshold,
+   distribution), incl. fan-out traps, with verified SQL + results.
+
+Decide in `PROJECT.md`: which demo DB + eval set, and DuckDB vs SQLite for eval.
+
+## 7. Evaluation framework (analytics correctness)  *(needs #6)*
+
+Automated harness to run the agent over the golden set and score it — so we
+measure (not guess) whether planning/verify improve accuracy, and catch
+regressions.
+
+- **Execution accuracy** (primary): agent result set vs gold result set —
+  order-insensitive, float-tolerant. Right metric since many SQLs are correct.
+- **Component metrics**: table-selection precision/recall, verifier catch-rate &
+  false-positive rate, retry counts (mechanical vs logic), truncation rate.
+- **Cost/latency**: tokens + wall-time per question (LangSmith has tokens).
+- **Per-archetype breakdown** to expose weak spots.
+- Reuse `run_turn()` / `build_graph()`; emit a scored JSON + summary; keep an
+  offline pytest-invokable subset; optionally wire LangSmith datasets/evaluators.
+
 ---
 
 ## Future add-ons
